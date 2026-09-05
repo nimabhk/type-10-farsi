@@ -40,6 +40,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const activeCharRef = useRef<HTMLSpanElement>(null);
   const timerRef = useRef<number | null>(null);
+  const hasCompletedRef = useRef<boolean>(false);
 
   const currentIndex = typedChars.length;
   const currentChar = targetText[currentIndex] || '';
@@ -62,6 +63,7 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
   // Reset state on targetText change
   const handleReset = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
+    hasCompletedRef.current = false;
     setTypedChars([]);
     setCharStatus([]);
     setStartTime(null);
@@ -117,9 +119,10 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
     }
   }, [currentIndex]);
 
-  // Complete session trigger
+  // Complete session trigger (guarded so it fires only once per session)
   useEffect(() => {
-    if (isFinished) {
+    if (isFinished && !hasCompletedRef.current) {
+      hasCompletedRef.current = true;
       const correctCount = charStatus.filter((s) => s === 'correct').length;
       const incorrectCount = charStatus.filter((s) => s === 'incorrect').length;
       const finalMetrics = calculateTypingMetrics(correctCount, incorrectCount, elapsedSeconds || 1);
@@ -364,35 +367,87 @@ export const TypingArea: React.FC<TypingAreaProps> = ({
 
         {/* Text stream */}
         <div 
-          className="text-lg sm:text-xl lg:text-2xl font-medium leading-relaxed tracking-wide text-slate-300 text-right select-none break-words"
+          className="flex flex-wrap items-center content-start gap-y-3 sm:gap-y-4 gap-x-1 sm:gap-x-1.5 text-xl sm:text-2xl lg:text-3xl font-medium leading-loose text-slate-300 text-right select-none py-1"
           style={{ fontFamily: 'Vazirmatn, sans-serif' }}
+          dir="rtl"
         >
           {targetText.split('').map((char, index) => {
             const isCurrent = index === currentIndex;
             const status = charStatus[index];
 
-            let charClass = 'text-slate-500';
+            // 1. SPACE CHARACTER (کلید فاصله)
+            if (char === ' ') {
+              return (
+                <span
+                  key={index}
+                  ref={isCurrent ? activeCharRef : null}
+                  className={`relative inline-flex items-center justify-center min-w-[32px] sm:min-w-[42px] h-9 sm:h-11 mx-1 px-2 rounded-xl border transition-all duration-150 select-none ${
+                    isCurrent
+                      ? 'bg-teal-500/25 border-teal-400 text-teal-300 ring-2 ring-teal-400/50 shadow-lg shadow-teal-500/30 scale-105 font-bold'
+                      : status === 'correct'
+                      ? 'text-teal-400/80 bg-teal-950/40 border-teal-800/60 font-semibold'
+                      : status === 'incorrect'
+                      ? 'text-rose-300 bg-rose-950/70 border-rose-500 font-bold'
+                      : 'text-slate-500 bg-slate-850/60 border-dashed border-slate-700/80 hover:border-slate-600'
+                  }`}
+                  title="کلید فاصله (Space)"
+                >
+                  <span className="text-base sm:text-lg font-mono leading-none select-none opacity-85">␣</span>
+                  {isCurrent && (
+                    <span className="absolute -top-3 text-[9px] font-bold text-teal-300 bg-slate-900/95 px-1.5 py-0.2 rounded-md border border-teal-500/60 shadow-sm whitespace-nowrap">
+                      فاصله
+                    </span>
+                  )}
+                </span>
+              );
+            }
+
+            // 2. HALF-SPACE / ZWNJ (نیم‌فاصله)
+            if (char === '‌') {
+              return (
+                <span
+                  key={index}
+                  ref={isCurrent ? activeCharRef : null}
+                  className={`relative inline-flex items-center justify-center min-w-[56px] h-9 sm:h-11 mx-1 px-2 rounded-xl border text-xs font-bold transition-all duration-150 select-none ${
+                    isCurrent
+                      ? 'bg-purple-500/30 border-purple-400 text-purple-200 ring-2 ring-purple-400/50 shadow-lg scale-105'
+                      : status === 'correct'
+                      ? 'text-purple-300 bg-purple-950/40 border-purple-800'
+                      : status === 'incorrect'
+                      ? 'text-rose-300 bg-rose-950/70 border-rose-500'
+                      : 'text-purple-400/80 bg-purple-950/20 border-dashed border-purple-800/60'
+                  }`}
+                  title="نیم‌فاصله (Shift + Space)"
+                >
+                  نیم‌فاصله
+                </span>
+              );
+            }
+
+            // 3. REGULAR LETTERS & CHARACTERS
+            let charStyle = 'text-slate-400 bg-slate-900/40 border-slate-800/80';
 
             if (status === 'correct') {
-              charClass = 'text-teal-400 font-semibold';
+              charStyle = 'text-teal-300 bg-teal-950/30 border-teal-800/60 font-semibold';
             } else if (status === 'incorrect') {
-              charClass = 'text-rose-400 bg-rose-950/60 rounded px-0.5 underline decoration-rose-500 decoration-2 font-bold';
+              charStyle = 'text-rose-300 bg-rose-950/80 border-rose-500 font-bold line-through';
             }
 
             return (
               <span
                 key={index}
                 ref={isCurrent ? activeCharRef : null}
-                className={`relative inline-block transition-colors duration-100 ${charClass} ${
-                  isCurrent ? 'bg-teal-500/20 text-white rounded px-0.5 ring-1 ring-teal-400' : ''
+                className={`relative inline-flex items-center justify-center min-w-[26px] sm:min-w-[34px] h-9 sm:h-11 mx-0.5 sm:mx-1 px-1.5 rounded-xl border transition-all duration-150 select-none ${charStyle} ${
+                  isCurrent
+                    ? 'bg-teal-500/20 border-teal-400 text-white ring-2 ring-teal-400/60 shadow-lg shadow-teal-500/20 scale-105 font-bold z-10'
+                    : ''
                 }`}
               >
-                {/* Active blinking cursor */}
+                {/* Active cursor indicator */}
                 {isCurrent && (
-                  <span className="absolute -left-0.5 top-0 bottom-0 w-0.5 bg-teal-400 rounded-full animate-cursor" />
+                  <span className="absolute -left-0.5 top-1.5 bottom-1.5 w-0.5 bg-teal-400 rounded-full animate-cursor" />
                 )}
-                {/* Render visible representation for space or ZWNJ */}
-                {char === ' ' ? ' ' : char === '‌' ? '‌' : char}
+                {char}
               </span>
             );
           })}

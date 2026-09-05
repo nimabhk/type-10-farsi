@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Trophy, 
   CheckCircle2, 
@@ -37,6 +37,8 @@ export const ScoreModal: React.FC<ScoreModalProps> = ({
   onClose,
   mode,
 }) => {
+  const [copied, setCopied] = useState<boolean>(false);
+
   // Check if passed criteria if in lesson mode
   const isLessonPassed = lesson
     ? stats.wpm >= lesson.minWpm && stats.accuracy >= lesson.minAccuracy
@@ -75,14 +77,46 @@ export const ScoreModal: React.FC<ScoreModalProps> = ({
     }
   }, [isLessonPassed]);
 
-  const handleCopyResult = () => {
+  // Keyboard shortcut listener for Enter and Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (lesson && onNextLesson && isLessonPassed) {
+          onNextLesson();
+        } else {
+          onRetry();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, onNextLesson, onRetry, lesson, isLessonPassed]);
+
+  const handleCopyResult = async () => {
     const text = `🏆 کارنامه تایپیست من:\nسرعت: ${stats.wpm} WPM (کلمه بر دقیقه)\nدقت: ${stats.accuracy}%\nزمان: ${stats.elapsedSeconds} ثانیه\nسامانه آموزش تایپ ده انگشتی فارسی تایپیست`;
-    navigator.clipboard.writeText(text);
-    alert('کارنامه با موفقیت در کلیپ‌بورد کپی شد!');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+    <div 
+      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div className="relative w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col gap-5 text-right">
         
         {/* Header Ribbon */}
@@ -118,6 +152,14 @@ export const ScoreModal: React.FC<ScoreModalProps> = ({
             ))}
           </div>
         </div>
+
+        {/* Copy Feedback Toast */}
+        {copied && (
+          <div className="bg-teal-500/20 border border-teal-500/40 text-teal-300 text-xs py-2 px-3 rounded-xl text-center flex items-center justify-center gap-2 animate-fade-in">
+            <Check className="w-4 h-4 text-teal-400" />
+            <span>کارنامه با موفقیت در کلیپ‌بورد کپی شد!</span>
+          </div>
+        )}
 
         {/* Primary Metrics Grid */}
         <div className="grid grid-cols-3 gap-2.5 sm:gap-3 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
@@ -214,9 +256,10 @@ export const ScoreModal: React.FC<ScoreModalProps> = ({
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2 pt-2">
           <button
+            type="button"
             id="btn-score-retry"
             onClick={onRetry}
-            className="flex-1 py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all border border-slate-700"
+            className="flex-1 py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all border border-slate-700 cursor-pointer select-none"
           >
             <RotateCcw className="w-4 h-4" />
             <span>تکرار مجدد تمرین</span>
@@ -224,9 +267,10 @@ export const ScoreModal: React.FC<ScoreModalProps> = ({
 
           {lesson && onNextLesson && isLessonPassed && (
             <button
+              type="button"
               id="btn-score-next-lesson"
               onClick={onNextLesson}
-              className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-teal-500/20"
+              className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 active:opacity-90 text-slate-950 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-teal-500/20 cursor-pointer select-none"
             >
               <span>درس بعدی</span>
               <ArrowLeft className="w-4 h-4" />
@@ -234,19 +278,21 @@ export const ScoreModal: React.FC<ScoreModalProps> = ({
           )}
 
           <button
+            type="button"
             id="btn-score-share"
             onClick={handleCopyResult}
-            className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition-all"
+            className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-400 hover:text-white border border-slate-700 transition-all cursor-pointer"
             title="کپی کردن کارنامه"
           >
             <Share2 className="w-4 h-4" />
           </button>
 
           <button
+            type="button"
             id="btn-score-close"
             onClick={onClose}
-            className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition-all"
-            title="بستن"
+            className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-400 hover:text-white border border-slate-700 transition-all cursor-pointer"
+            title="بستن (Esc)"
           >
             <XCircle className="w-4 h-4" />
           </button>

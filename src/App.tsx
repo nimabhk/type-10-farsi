@@ -67,12 +67,23 @@ export default function App() {
     }));
   };
 
-  // Score modal state
+  // Score modal state & session key to force fresh reset on retry
+  const [sessionKey, setSessionKey] = useState<number>(0);
   const [scoreModalData, setScoreModalData] = useState<{
     stats: TypingStats;
     lesson?: Lesson | null;
     mode: 'lesson' | 'test' | 'race' | 'custom';
   } | null>(null);
+
+  const handleScoreRetry = () => {
+    setScoreModalData(null);
+    setSessionKey((prev) => prev + 1);
+  };
+
+  const handleScoreClose = () => {
+    setScoreModalData(null);
+    setSessionKey((prev) => prev + 1);
+  };
 
   // Best WPM overall
   const history = getTestHistory();
@@ -257,6 +268,7 @@ export default function App() {
     setActiveLesson(null);
     setCurrentMode('custom');
     setScoreModalData(null);
+    setSessionKey((prev) => prev + 1);
   };
 
   // Next lesson trigger
@@ -266,9 +278,11 @@ export default function App() {
     if (currentIndex >= 0 && currentIndex < LESSONS.length - 1) {
       setActiveLesson(LESSONS[currentIndex + 1]);
       setScoreModalData(null);
+      setSessionKey((prev) => prev + 1);
     } else {
       setActiveLesson(null);
       setScoreModalData(null);
+      setSessionKey((prev) => prev + 1);
     }
   };
 
@@ -323,7 +337,7 @@ export default function App() {
 
                 {/* Interactive Typing Canvas */}
                 <TypingArea
-                  key={activeLesson.id}
+                  key={`lesson-${activeLesson.id}-${sessionKey}`}
                   targetText={activeLesson.practiceText}
                   title={activeLesson.title}
                   categoryLabel={activeLesson.categoryFa}
@@ -345,6 +359,7 @@ export default function App() {
         {/* Mode 2: Speed Test Mode */}
         {currentMode === 'speedtest' && (
           <SpeedTestView
+            key={`speedtest-${sessionKey}`}
             keyboardLayout={settings.keyboardLayout}
             onTestComplete={handleSpeedTestComplete}
             onTargetKeyChange={handleTargetKeyChange}
@@ -355,6 +370,7 @@ export default function App() {
         {/* Mode 3: Race Mode */}
         {currentMode === 'race' && (
           <RaceView
+            key={`race-${sessionKey}`}
             keyboardLayout={settings.keyboardLayout}
             onRaceComplete={handleRaceComplete}
             onTargetKeyChange={handleTargetKeyChange}
@@ -382,7 +398,7 @@ export default function App() {
                 </div>
 
                 <TypingArea
-                  key={activeCustomPractice.title}
+                  key={`custom-${activeCustomPractice.title}-${sessionKey}`}
                   targetText={activeCustomPractice.text}
                   title={activeCustomPractice.title}
                   categoryLabel={activeCustomPractice.category}
@@ -444,18 +460,26 @@ export default function App() {
           stats={scoreModalData.stats}
           lesson={scoreModalData.lesson}
           mode={scoreModalData.mode}
-          onRetry={() => setScoreModalData(null)}
+          onRetry={handleScoreRetry}
           onNextLesson={handleNextLesson}
           onStartRemedialDrill={handleStartRemedialDrill}
-          onClose={() => setScoreModalData(null)}
+          onClose={handleScoreClose}
         />
       )}
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950 py-6 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div>
-            تایپیست — سامانه جامع آموزش و ارتقای سرعت تایپ ده انگشتی با کیبورد استاندارد فارسی
+          <div className="flex items-center gap-2">
+            <span>تایپیست — سامانه جامع آموزش و ارتقای سرعت تایپ ده انگشتی با کیبورد استاندارد فارسی</span>
+            <a 
+              href="https://type10farsi.ai.studio" 
+              target="_blank" 
+              rel="noreferrer"
+              className="text-teal-400 hover:text-teal-300 underline font-mono text-[11px]"
+            >
+              type10farsi.ai.studio
+            </a>
           </div>
           <div className="flex items-center gap-4 text-slate-400">
             <span>استاندارد ملی ISIRI 9147</span>
