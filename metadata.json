@@ -1,0 +1,6 @@
+{
+  "name": "تایپیست | سامانه آموزش و سنجش تایپ ده انگشتی فارسی",
+  "description": "نرم‌افزار جامع تمرین تایپ ده انگشتی فارسی با کیبورد تعاملی، آزمون‌های سرعت، تحلیل هوشمند خطاها، حالت رقابتی و متون سفارشی",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
